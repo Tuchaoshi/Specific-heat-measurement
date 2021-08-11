@@ -1,0 +1,62 @@
+#include<OneWire.h>
+#include<DallasTemperature.h>
+
+#define M_BAS 42.3 //Weight of inner drum and stirring rod
+#define M_TOTAL 211.8//The total mass after adding the liquid
+#define C_AI 880//Specific heat of inner barrel and agitator material（J/(kg·℃)）
+#define V_CHANGE (12.2 / 2.2)//The partial pressure resistance
+#define TEMP_PIN 2 //Temperature of the pin
+#define I_PIN A1 //Current pin
+#define V_PIN A0//Voltage pin
+
+float temp1,temp2;
+double times1,times2,times;
+float i,v;
+float cL;
+
+OneWire ds(2);
+DallasTemperature qd(&ds);
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(TEMP_PIN,INPUT);
+  pinMode(I_PIN,INPUT);
+  pinMode(V_PIN,INPUT);
+  qd.begin();
+  qd.requestTemperatures();  
+  temp1 = qd.getTempCByIndex(0);//The initial temperature
+  times1 = millis()/1000;//Starting time
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  float e,qAI;
+  times = millis()/1000;//The current time
+  i = ((float)analogRead(I_PIN) * 5.0 / 1023 - 0.5 * 5.0) / 0.185;//current
+  v = (float)analogRead(V_PIN)* V_CHANGE * 5.0 /1023.0;//voltage
+  qd.requestTemperatures();  
+  temp2 = qd.getTempCByIndex(0);//The current temperature
+  times2 = times - times1;//Time interval between
+  
+  Serial.print("Heating time: Δt = ");
+  Serial.print(times2);
+  Serial.print(" s\nVoltage: v = ");
+  Serial.print(v);
+  Serial.print(" V\nElectricity: i = ");
+  Serial.print(i);
+  Serial.print(" A\nInitial temperature: T1 = ");
+  Serial.print(temp1);
+  Serial.print(" ℃\nCurrent temperature: T2 = ");
+  Serial.print(temp2);
+  
+  e = v * i * times2;
+  qAI = M_BAS * (temp2 - temp1) * C_AI / 1000;//The heat absorbed by 
+                                              //the inner barrel and the stirring bar
+  cL = (e - qAI) / ((M_TOTAL - M_BAS) / 1000 * (temp2 - temp1));
+  Serial.print(" ℃\nThe specific heat of the liquid under test is: ");
+  Serial.print(cL);
+  Serial.println("J/(kg·℃).\n\n");  
+  delay(10000);
+  
+}
